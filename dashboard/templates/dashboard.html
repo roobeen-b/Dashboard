@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Payment Tools Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=DM+Sans:wght@300;400;500;600&family=Source+Sans+3:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+/* ─── RESET & ROOT ─────────────────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0}
+
+:root {
+  --bg:#0b0b09;
+  --surface:#141412;
+  --surface2:#1c1c19;
+  --surface3:#222220;
+  --border:#272724;
+  --border2:#323230;
+  --text:#ece9e2;
+  --muted:#aaa69b;
+  --muted2:#9a9790;
+  --accent:#c8f060;
+  --accent2:#d4f570;
+  --danger:#ff6b6b;
+  --success:#6bffb8;
+  --gold:#e8b84b;
+  --navy:#0d1f35;
+  --navy2:#1a3a5c;
+  --mono:'DM Mono',monospace;
+  --sans:'DM Sans',sans-serif;
+  --sidebar-w:240px;
+}
+
+html, body { height:100%; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ─── TOPBAR ───────────────────────────────────────────────────────── */
+.topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 56px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  z-index: 100;
+  gap: 16px;
+}
+
+.topbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.logo-mark {
+  width: 30px; height: 30px;
+  background: var(--accent);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-mark svg { display: block; }
+
+.logo-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -.01em;
+}
+
+.logo-text span { color: var(--muted); font-weight: 300; }
+
+.topbar-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--border2);
+  margin: 0 4px;
+}
+
+.topbar-nav {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.topbar-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: color .15s, background .15s;
+  white-space: nowrap;
+}
+
+.topbar-tab:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.topbar-tab.active {
+  background: rgba(200,240,96,.1);
+  color: var(--accent);
+}
+
+.topbar-tab .tab-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: .5;
+  flex-shrink: 0;
+}
+
+.topbar-tab.active .tab-dot { opacity: 1; }
+
+.topbar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(107,255,184,.08);
+  border: 1px solid rgba(107,255,184,.15);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--success);
+}
+
+.status-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--success);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,100%{opacity:1;transform:scale(1)}
+  50%{opacity:.4;transform:scale(.8)}
+}
+
+/* ─── MAIN LAYOUT ──────────────────────────────────────────────────── */
+.main-wrap {
+  margin-top: 56px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── PAGES ────────────────────────────────────────────────────────── */
+.page { display: none; flex: 1; }
+.page.active { display: flex; flex-direction: column; }
+
+/* ─── HOME / DASHBOARD PAGE ────────────────────────────────────────── */
+#page-home {
+  padding: 48px 32px;
+  align-items: center;
+}
+
+.home-inner {
+  width: 100%;
+  max-width: 860px;
+}
+
+.home-eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.home-title {
+  font-size: 38px;
+  font-weight: 300;
+  letter-spacing: -.03em;
+  line-height: 1.15;
+  margin-bottom: 12px;
+}
+
+.home-title strong {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.home-sub {
+  font-size: 15px;
+  color: var(--muted2);
+  margin-bottom: 48px;
+  max-width: 480px;
+  line-height: 1.6;
+}
+
+.tools-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+@media(max-width:640px){.tools-grid{grid-template-columns:1fr}}
+
+.tool-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px;
+  cursor: pointer;
+  transition: border-color .2s, background .2s, transform .15s;
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+}
+
+.tool-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  opacity: 0;
+  transition: opacity .2s;
+}
+
+.tool-card.splitter::before { background: radial-gradient(circle at 30% 30%, rgba(200,240,96,.05) 0%, transparent 70%); }
+.tool-card.report::before  { background: radial-gradient(circle at 30% 30%, rgba(232,184,75,.05) 0%, transparent 70%); }
+
+.tool-card:hover {
+  border-color: var(--border2);
+  transform: translateY(-2px);
+}
+
+.tool-card:hover::before { opacity: 1; }
+
+.tool-card.splitter:hover { border-color: rgba(200,240,96,.3); }
+.tool-card.report:hover   { border-color: rgba(232,184,75,.3); }
+
+.tc-icon {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  flex-shrink: 0;
+}
+
+.tool-card.splitter .tc-icon { background: rgba(200,240,96,.12); border: 1px solid rgba(200,240,96,.2); }
+.tool-card.report   .tc-icon { background: rgba(232,184,75,.12);  border: 1px solid rgba(232,184,75,.2); }
+
+.tc-name {
+  font-size: 17px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  letter-spacing: -.01em;
+  color: var(--accent);
+}
+
+.tc-desc {
+  font-size: 13px;
+  color: var(--muted2);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.tc-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tc-tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  border: 1px solid var(--border2);
+  color: var(--muted);
+}
+
+.tool-card.splitter .tc-tag { border-color: rgba(200,240,96,.2); color: rgba(200,240,96,.6); }
+.tool-card.report   .tc-tag { border-color: rgba(232,184,75,.2);  color: rgba(232,184,75,.6); }
+
+.tc-arrow {
+  position: absolute;
+  right: 24px;
+  bottom: 28px;
+  opacity: 0;
+  transition: opacity .2s, transform .2s;
+  color: var(--muted);
+}
+
+.tool-card:hover .tc-arrow { opacity: 1; transform: translateX(3px); }
+
+.home-footer-note {
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.home-footer-note::before {
+  content: '';
+  display: inline-block;
+  width: 16px; height: 1px;
+  background: var(--border2);
+}
+
+/* ─── TOOL PAGE WRAPPER ────────────────────────────────────────────── */
+.tool-page-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 32px 0;
+}
+
+.tph-back {
+  background: none;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 6px 12px;
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color .15s, border-color .15s;
+}
+
+.tph-back:hover { color: var(--text); border-color: var(--border); }
+
+.tph-title { font-size: 14px; font-weight: 500; }
+.tph-sub { font-size: 12px; color: var(--muted); }
+
+/* ─── SPLITTER PAGE ────────────────────────────────────────────────── */
+#page-splitter {
+  padding: 0 0 60px;
+}
+
+.splitter-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 24px 0;
+}
+
+/* ─── REPORT PAGE ──────────────────────────────────────────────────── */
+#page-report {
+  padding: 0 0 60px;
+}
+
+.report-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px 20px 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   MERCHANT SPLITTER STYLES (scoped under #page-splitter)
+═══════════════════════════════════════════════════════════════════ */
+#page-splitter h1{font-size:24px;font-weight:300;letter-spacing:-.02em;margin-bottom:.25rem;text-align:center}
+#page-splitter h1 span{color:var(--accent);font-weight:500}
+#page-splitter .subtitle{font-size:13px;color:var(--muted);margin-bottom:2rem;text-align:center}
+.s-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:2rem;width:100%;max-width:700px;margin-bottom:1.5rem}
+.s-dropzone{border:1.5px dashed var(--border2);border-radius:12px;padding:2.5rem 2rem;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;position:relative}
+.s-dropzone:hover,.s-dropzone.over{border-color:var(--accent);background:rgba(200,240,96,.04)}
+.s-dropzone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.s-drop-icon{width:44px;height:44px;margin:0 auto 1rem;border:1.5px solid var(--border2);border-radius:10px;display:flex;align-items:center;justify-content:center}
+.s-dropzone h2{font-size:15px;font-weight:400;margin-bottom:.3rem}
+.s-dropzone p{font-size:13px;color:var(--muted)}
+.s-file-pill{display:none;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:10px 14px;margin-top:1.2rem;font-size:13px}
+.s-file-pill .fname{font-family:var(--mono);font-size:12px;color:var(--accent);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.s-file-pill .fsize{color:var(--muted);font-size:12px;flex-shrink:0}
+.s-remove-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:2px 5px;border-radius:4px}
+.s-remove-btn:hover{color:var(--danger)}
+.s-info-row{display:flex;gap:10px;margin-top:1.2rem;flex-wrap:wrap}
+.s-info-box{background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:10px 16px;font-size:12px;flex:1;min-width:120px}
+.s-info-box .ib-label{color:var(--muted);margin-bottom:3px}
+.s-info-box .ib-val{font-family:var(--mono);font-size:14px;color:var(--accent);font-weight:500}
+.s-headers-wrap{margin-top:1.2rem}
+.s-headers-label{font-size:12px;color:var(--muted);margin-bottom:8px}
+.s-headers-list{display:flex;flex-wrap:wrap;gap:6px}
+.hchip{background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:4px 10px;font-size:11px;font-family:var(--mono);color:var(--text)}
+.hchip.merchant{border-color:var(--accent);color:var(--accent)}
+.s-merchants-wrap{margin-top:1.2rem}
+.s-merchants-label{font-size:12px;color:var(--muted);margin-bottom:8px}
+.s-mchips{display:flex;flex-wrap:wrap;gap:7px}
+.s-mchip{background:var(--surface2);border:1px solid var(--border2);border-radius:20px;padding:4px 12px;font-size:12px;font-family:var(--mono);color:var(--text);display:flex;align-items:center;gap:6px}
+.s-mchip .cnt{background:rgba(200,240,96,.15);color:var(--accent);border-radius:10px;padding:1px 7px;font-size:11px}
+.split-btn{width:100%;padding:14px;background:var(--accent);color:#0f0f0d;font-family:var(--sans);font-size:15px;font-weight:500;border:none;border-radius:10px;cursor:pointer;margin-top:1.5rem;transition:background .15s}
+.split-btn:hover{background:var(--accent2)}
+.split-btn:disabled{background:var(--border2);color:var(--muted);cursor:not-allowed}
+.s-progress-wrap{margin-top:1.2rem;display:none}
+.pbar-bg{background:var(--border);border-radius:4px;height:4px;overflow:hidden;margin-bottom:.6rem}
+.pbar{background:var(--accent);height:4px;border-radius:4px;transition:width .3s}
+.plog{font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.9;max-height:120px;overflow-y:auto}
+.plog .ok{color:var(--success)}
+.plog .hi{color:var(--accent)}
+.s-result-card{background:var(--surface);border:1px solid var(--accent);border-radius:16px;padding:1.5rem 2rem;width:100%;max-width:700px;display:none}
+.s-result-card.show{display:block}
+.s-res-header{display:flex;align-items:center;gap:12px;margin-bottom:1.2rem}
+.s-res-icon{width:34px;height:34px;background:rgba(200,240,96,.15);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.s-res-title{font-size:15px;font-weight:500}
+.s-res-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.s-sheet-list{display:flex;flex-direction:column;gap:5px;margin-bottom:1.2rem;max-height:240px;overflow-y:auto}
+.srow{display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border-radius:7px;padding:8px 12px;font-size:12px;font-family:var(--mono)}
+.srow .sn{color:var(--accent)}
+.srow .sc{color:var(--muted)}
+.dl-btn{display:block;width:100%;padding:13px;background:var(--accent);color:#0f0f0d;border:none;border-radius:10px;font-family:var(--sans);font-size:15px;font-weight:500;cursor:pointer;text-align:center;transition:background .15s}
+.dl-btn:hover{background:var(--accent2)}
+
+/* ═══════════════════════════════════════════════════════════════════
+   REPORT GENERATOR STYLES (scoped under #page-report)
+═══════════════════════════════════════════════════════════════════ */
+.r-upload-card{
+  background:rgba(255,255,255,.04);
+  border:2px dashed #2a3f55;
+  border-radius:12px;
+  padding:36px;
+  text-align:center;
+  cursor:pointer;
+  transition:.3s;
+  max-width:560px;
+  margin:0 auto 28px;
+}
+.r-upload-card:hover{border-color:var(--gold);background:rgba(232,184,75,.04)}
+#r-fileInput{display:none}
+
+.r-month-bar{
+  display:none;
+  justify-content:center;
+  gap:10px;
+  margin-bottom:28px;
+  flex-wrap:wrap;
+}
+
+.r-month-btn{
+  padding:8px 20px;
+  border-radius:20px;
+  border:1px solid #2a3f55;
+  background:transparent;
+  color:#6a8899;
+  cursor:pointer;
+  font-weight:600;
+  font-family:'Source Sans 3',sans-serif;
+  transition:.2s;
+}
+.r-month-btn.active{background:var(--gold);color:var(--navy);border-color:var(--gold)}
+.r-month-btn:hover:not(.active){border-color:var(--gold);color:var(--gold)}
+
+.r-error-box{
+  background:rgba(255,100,100,.1);
+  color:#ff9999;
+  padding:14px;
+  border-radius:8px;
+  display:none;
+  margin-bottom:20px;
+  text-align:center;
+  border:1px solid rgba(255,100,100,.2);
+}
+
+#r-reportSection{
+  display:none;
+  background:#fff;
+  color:#333;
+  border-radius:8px;
+  overflow:hidden;
+  box-shadow:0 12px 40px rgba(0,0,0,.5);
+  margin-bottom:24px;
+}
+
+.r-report-top-bar{
+  padding:20px;
+  text-align:center;
+  border-bottom:1px solid #b0b0b0;
+  position:relative;
+}
+.r-report-title{font-size:22px;font-weight:700;color:#000;font-family:'Source Sans 3',sans-serif}
+.r-report-subtitle{font-size:15px;color:#555;margin-top:5px;font-family:'Source Sans 3',sans-serif}
+
+.r-export-btn{
+  position:absolute;
+  right:20px;
+  top:50%;
+  transform:translateY(-50%);
+  background:#1d6f42;
+  color:#fff;
+  border:none;
+  padding:8px 16px;
+  border-radius:4px;
+  font-weight:700;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-family:'Source Sans 3',sans-serif;
+  font-size:13px;
+  white-space:nowrap;
+}
+.r-export-btn:hover{background:#145a32}
+
+.r-spreadsheet-container{display:flex;border-top:1px solid #b0b0b0}
+.r-table-panel{flex:1;overflow-x:auto}
+.r-spacer-col{width:40px;background:#eee;border-left:1px solid #b0b0b0;border-right:1px solid #b0b0b0}
+.r-table-header-label{
+  background:#e6e6e6;
+  padding:10px;
+  text-align:center;
+  font-weight:700;
+  border-bottom:1px solid #b0b0b0;
+  font-size:14px;
+  font-family:'Source Sans 3',sans-serif;
+  color:#222;
+}
+#r-reportSection table{width:100%;border-collapse:collapse;font-size:13px;font-family:'Source Sans 3',sans-serif}
+#r-reportSection th{background:#f3f3f3;border:1px solid #b0b0b0;padding:8px;font-weight:600;text-align:center;color:#222}
+#r-reportSection td{border:1px solid #ddd;padding:6px 10px;color:#333}
+#r-reportSection tr:nth-child(even){background-color:#f9f9f9}
+#r-reportSection tr:hover{background-color:#fff8e1}
+#r-reportSection .num{text-align:right;font-variant-numeric:tabular-nums}
+#r-reportSection .center{text-align:center}
+#r-reportSection .bold{font-weight:700}
+#r-reportSection tfoot td{background:#e8eff7;font-weight:700;border-top:2px solid #b0b0b0}
+
+/* ─── SCROLLBAR ────────────────────────────────────────────────────── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#555}
+</style>
+</head>
+<body>
+
+<!-- ─── TOP BAR ─────────────────────────────────────────────────────── -->
+<div class="topbar">
+  <div class="topbar-logo" style="cursor:pointer" onclick="showPage('home')">
+    <div class="logo-mark">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0b0b09" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 17h7M17 14v7"/>
+      </svg>
+    </div>
+    <span class="logo-text">Payment <span>Tools</span></span>
+  </div>
+
+  <div class="topbar-divider"></div>
+
+  <nav class="topbar-nav">
+    <button class="topbar-tab" id="tab-home" onclick="showPage('home')">
+      <span class="tab-dot"></span> Dashboard
+    </button>
+    <button class="topbar-tab" id="tab-splitter" onclick="showPage('splitter')">
+      <span class="tab-dot"></span> Merchant Splitter
+    </button>
+    <button class="topbar-tab" id="tab-report" onclick="showPage('report')">
+      <span class="tab-dot"></span> Branch Report
+    </button>
+  </nav>
+
+  <div class="topbar-right">
+    <div class="status-pill">
+      <div class="status-dot"></div>
+      Local · Private
+    </div>
+  </div>
+</div>
+
+<!-- ─── MAIN ─────────────────────────────────────────────────────────── -->
+<div class="main-wrap">
+
+  <!-- HOME PAGE -->
+  <div class="page active" id="page-home">
+    <div id="page-home" style="display:flex;flex:1;padding:48px 32px;align-items:flex-start;justify-content:center">
+      <div class="home-inner">
+        <p class="home-eyebrow">Internal Toolkit · v1.0</p>
+        <h1 class="home-title">Payment <strong>Processing</strong><br>Tools Dashboard</h1>
+        <p class="home-sub">Two specialized utilities for handling payment data — split merchant sheets or generate branch-wise reports. All processing stays local in your browser.</p>
+
+        <div class="tools-grid">
+          <!-- Merchant Splitter Card -->
+          <button class="tool-card splitter" onclick="showPage('splitter')">
+            <div class="tc-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c8f060" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                <line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/>
+              </svg>
+            </div>
+            <div class="tc-name">Merchant Sheet Splitter</div>
+            <div class="tc-desc">Upload a payments Excel file and automatically split rows into one dedicated sheet per merchant, with subtotals and Nepali number formatting.</div>
+            <div class="tc-tags">
+              <span class="tc-tag">.xlsx</span>
+              <span class="tc-tag">.xls</span>
+              <span class="tc-tag">.csv</span>
+              <span class="tc-tag">Auto-split</span>
+              <span class="tc-tag">Subtotals</span>
+            </div>
+            <svg class="tc-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </button>
+
+          <!-- Branch Report Card -->
+          <button class="tool-card report" onclick="showPage('report')">
+            <div class="tc-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e8b84b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+              </svg>
+            </div>
+            <div class="tc-name">Monthly summary report</div>
+            <div class="tc-desc">Parse your download.xls file and generate a formatted dual-sorted report — ranked by Amount Paid and by Transaction Count — with Nepali calendar support.</div>
+            <div class="tc-tags">
+              <span class="tc-tag">.xls</span>
+              <span class="tc-tag">.xlsx</span>
+              <span class="tc-tag">Nepali BS</span>
+              <span class="tc-tag">CSV Export</span>
+              <span class="tc-tag">Dual-sort</span>
+            </div>
+            <svg class="tc-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </button>
+
+          <!-- dataload Card -->
+          <a href="{% url 'loader' %}" style="text-decoration: none;">
+          <button class="tool-card report">
+            <div class="tc-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e8b84b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+              </svg>
+            </div>
+            <div class="tc-name">Data Load Report</div>
+            <div class="tc-desc">To track the paid file uploaded time by the DCS</div>
+            <div class="tc-tags">
+              <span class="tc-tag">.xls</span>
+              <span class="tc-tag">.xlsx</span>
+              <span class="tc-tag">Nepali BS</span>
+              <span class="tc-tag">CSV Export</span>
+              <span class="tc-tag">Dual-sort</span>
+            </div>
+            <svg class="tc-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </button>
+        </a>
+        </div>
+
+        <p class="home-footer-note">All data is processed entirely in your browser — nothing is uploaded to any server.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MERCHANT SPLITTER PAGE -->
+  <div class="page" id="page-splitter">
+    <div class="tool-page-header">
+      <button class="tph-back" onclick="showPage('home')">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Back
+      </button>
+      <div>
+        <div class="tph-title">Merchant Sheet Splitter</div>
+        <div class="tph-sub">One sheet per merchant · Nepali number format · PAID_AMT subtotals</div>
+      </div>
+    </div>
+
+    <div class="splitter-inner">
+      <div class="s-card">
+        <div class="s-dropzone" id="s-dropzone">
+          <input type="file" id="s-fileInput" accept=".xlsx,.xls,.csv">
+          <div class="s-drop-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7a7970" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12M8 8l4-4 4 4"/>
+            </svg>
+          </div>
+          <h2>Drop your Excel file here</h2>
+          <p>or click to browse &nbsp;·&nbsp; .xlsx / .xls / .csv</p>
+        </div>
+
+        <div class="s-file-pill" id="s-filePill">
+          <div style="width:28px;height:28px;background:rgba(200,240,96,.15);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c8f060" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+          <span class="fname" id="s-fileName"></span>
+          <span class="fsize" id="s-fileSize"></span>
+          <button class="s-remove-btn" onclick="sResetAll()">✕</button>
+        </div>
+
+        <div id="s-fileInfo" style="display:none">
+          <div class="s-info-row">
+            <div class="s-info-box"><div class="ib-label">Total rows</div><div class="ib-val" id="s-rowCount">—</div></div>
+            <div class="s-info-box"><div class="ib-label">Columns</div><div class="ib-val" id="s-colCount">—</div></div>
+            <div class="s-info-box"><div class="ib-label">Merchants found</div><div class="ib-val" id="s-merchantCount">—</div></div>
+          </div>
+
+          <div class="s-headers-wrap">
+            <div class="s-headers-label">Your columns — highlighted column is used for splitting</div>
+            <div class="s-headers-list" id="s-headersList"></div>
+          </div>
+
+          <div class="s-merchants-wrap">
+            <div class="s-merchants-label" id="s-merchantsLabel"></div>
+            <div class="s-mchips" id="s-merchantChips"></div>
+          </div>
+
+          <button class="split-btn" id="s-splitBtn" onclick="doSplit()">Split into merchant sheets</button>
+
+          <div class="s-progress-wrap" id="s-progressWrap">
+            <div class="pbar-bg"><div class="pbar" id="s-pbar" style="width:0%"></div></div>
+            <div class="plog" id="s-plog"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="s-result-card" id="s-resultCard">
+        <div class="s-res-header">
+          <div class="s-res-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c8f060" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div>
+            <div class="s-res-title">Split complete!</div>
+            <div class="s-res-sub" id="s-resSub"></div>
+          </div>
+        </div>
+        <div class="s-sheet-list" id="s-sheetList"></div>
+        <button class="dl-btn" id="s-dlBtn">Download Merchant_Payments file</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BRANCH REPORT PAGE -->
+  <div class="page" id="page-report">
+    <div class="tool-page-header">
+      <button class="tph-back" onclick="showPage('home')">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Back
+      </button>
+      <div>
+        <div class="tph-title">Branch Wise Paid Report Generator</div>
+        <div class="tph-sub">Dual-sorted report · Nepali BS calendar · CSV export</div>
+      </div>
+    </div>
+
+    <div class="report-inner">
+      <div class="r-upload-card" id="r-uploadCard">
+        <div style="font-size:46px;margin-bottom:10px">📊</div>
+        <div id="r-uploadText">Drop <strong>download.xls</strong> here or click to browse</div>
+        <input type="file" id="r-fileInput" accept=".xls,.xlsx,.html,.htm">
+      </div>
+
+      <div class="r-error-box" id="r-errorBox"></div>
+      <div class="r-month-bar" id="r-monthBar"></div>
+
+      <div id="r-reportSection">
+        <div class="r-report-top-bar">
+          <div class="r-report-title">Branch Wise Paid Report</div>
+          <div class="r-report-subtitle" id="r-reportSubtitle"></div>
+          <button class="r-export-btn" id="r-exportBtn">📥 Download Excel (CSV)</button>
+        </div>
+
+        <div class="r-spreadsheet-container">
+          <div class="r-table-panel">
+            <div class="r-table-header-label">According to Amount Paid</div>
+            <table id="r-tableAmt">
+              <thead>
+                <tr><th>S.No</th><th>Branch Name</th><th>Txn Count</th><th>Amount Paid</th></tr>
+              </thead>
+              <tbody></tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="2" class="center">TOTAL</td>
+                  <td class="num" id="r-footAmtTxn"></td>
+                  <td class="num" id="r-footAmtAmt"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <div class="r-spacer-col"></div>
+          <div class="r-table-panel">
+            <div class="r-table-header-label">According to Transaction Count</div>
+            <table id="r-tableTxn">
+              <thead>
+                <tr><th>S.No</th><th>Branch Name</th><th>Txn Count</th><th>Amount Paid</th></tr>
+              </thead>
+              <tbody></tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="2" class="center">TOTAL</td>
+                  <td class="num" id="r-footTxnTxn"></td>
+                  <td class="num" id="r-footTxnAmt"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main-wrap -->
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   NAVIGATION
+═══════════════════════════════════════════════════════════════════ */
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.topbar-tab').forEach(t => t.classList.remove('active'));
+
+  if (id === 'home') {
+    // home uses an inner div trick — just show the first page div
+    document.getElementById('page-home').closest('.page') 
+      ? document.getElementById('page-home').closest('.page').classList.add('active')
+      : null;
+    // fallback: show first .page
+    document.querySelectorAll('.page')[0].classList.add('active');
+    document.getElementById('tab-home').classList.add('active');
+  } else {
+    const pg = document.getElementById('page-' + id);
+    if (pg) pg.classList.add('active');
+    const tb = document.getElementById('tab-' + id);
+    if (tb) tb.classList.add('active');
+  }
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// Fix: home page structure re-use
+document.querySelectorAll('.page')[0].id = '_page-home-wrap';
+document.getElementById('tab-home').classList.add('active');
+
+/* ═══════════════════════════════════════════════════════════════════
+   MERCHANT SPLITTER LOGIC
+═══════════════════════════════════════════════════════════════════ */
+var sOutputBlob = null;
+var sAllRows = [], sHeaders = [], sMerchantMap = {}, sMColIndex = 1;
+
+var sDropzone = document.getElementById('s-dropzone');
+var sFileInput = document.getElementById('s-fileInput');
+
+sDropzone.addEventListener('dragover', function(e){ e.preventDefault(); sDropzone.classList.add('over'); });
+sDropzone.addEventListener('dragleave', function(){ sDropzone.classList.remove('over'); });
+sDropzone.addEventListener('drop', function(e){
+  e.preventDefault(); sDropzone.classList.remove('over');
+  if(e.dataTransfer.files[0]) sHandleFile(e.dataTransfer.files[0]);
+});
+sFileInput.addEventListener('change', function(){
+  if(sFileInput.files[0]) sHandleFile(sFileInput.files[0]);
+});
+
+function sHandleFile(file) {
+  document.getElementById('s-fileName').textContent = file.name;
+  document.getElementById('s-fileSize').textContent = (file.size/1024).toFixed(1)+' KB';
+  document.getElementById('s-filePill').style.display = 'flex';
+  document.getElementById('s-resultCard').classList.remove('show');
+  document.getElementById('s-progressWrap').style.display = 'none';
+  document.getElementById('s-splitBtn').disabled = false;
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var data = new Uint8Array(e.target.result);
+    var wb = XLSX.read(data, {type:'array'});
+    var ws = wb.Sheets[wb.SheetNames[0]];
+    var raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+    if(!raw || raw.length < 2){ alert('Could not read data from this file.'); return; }
+
+    sHeaders = raw[0].map(function(h){ return String(h); });
+    sAllRows = raw.slice(1).filter(function(r){ return r.some(function(c){ return c!==''; }); });
+
+    sMColIndex = sHeaders.findIndex(function(h){ return String(h).trim().toLowerCase()==='merchant'; });
+    if(sMColIndex < 0) sMColIndex = 1;
+
+    sMerchantMap = {};
+    sAllRows.forEach(function(r){
+      var m = String(r[sMColIndex]||'').trim();
+      if(!m) return; // skip blank merchant rows entirely
+      if(!sMerchantMap[m]) sMerchantMap[m] = [];
+      sMerchantMap[m].push(r);
+    });
+
+    document.getElementById('s-rowCount').textContent = sAllRows.length;
+    document.getElementById('s-colCount').textContent = sHeaders.length;
+    var names = Object.keys(sMerchantMap);
+    document.getElementById('s-merchantCount').textContent = names.length;
+
+    var hl = document.getElementById('s-headersList');
+    hl.innerHTML = sHeaders.map(function(h,i){
+      return '<span class="hchip'+(i===sMColIndex?' merchant':'')+'">'+h+'</span>';
+    }).join('');
+
+    document.getElementById('s-merchantsLabel').textContent = names.length+' merchant'+(names.length!==1?'s':'')+' detected';
+    var mc = document.getElementById('s-merchantChips');
+    mc.innerHTML = names.slice(0,30).map(function(n){
+      return '<span class="s-mchip">'+n+'<span class="cnt">'+sMerchantMap[n].length+'</span></span>';
+    }).join('')+(names.length>30?'<span class="s-mchip" style="color:var(--muted)">+'+( names.length-30)+' more</span>':'');
+
+    document.getElementById('s-fileInfo').style.display = 'block';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function sLog(msg) {
+  var el = document.getElementById('s-plog');
+  el.innerHTML += msg + '<br>';
+  el.scrollTop = el.scrollHeight;
+}
+
+function doSplit() {
+  var names = Object.keys(sMerchantMap);
+  if(!names.length) return;
+  document.getElementById('s-splitBtn').disabled = true;
+  document.getElementById('s-progressWrap').style.display = 'block';
+  document.getElementById('s-pbar').style.width = '0%';
+  document.getElementById('s-plog').innerHTML = '';
+
+  var wb = XLSX.utils.book_new();
+
+  // ── Nepali number formatter ──────────────────────────────────────
+  function nepalFmt(n) {
+    var fixed=Number(n).toFixed(2), parts=fixed.split('.'), intPart=parts[0];
+    var neg=intPart.indexOf('-')===0?'-':''; intPart=intPart.replace('-','');
+    if(intPart.length<=3) return neg+intPart+'.'+parts[1];
+    var last3=intPart.slice(-3), rest=intPart.slice(0,-3), groups=[];
+    while(rest.length>2){groups.unshift(rest.slice(-2));rest=rest.slice(0,-2);}
+    if(rest) groups.unshift(rest);
+    return neg+groups.join(',')+','+last3+'.'+parts[1];
+  }
+  function nepalFmtInt(n){ return nepalFmt(Math.round(n)).replace(/\.\d+$/,''); }
+
+  // ── AD to Nepali BS converter (2070-2085) ────────────────────────
+  var BS_DATA = {
+    2070:[0,[31,32,31,32,31,30,30,30,29,30,29,30]],
+    2071:[365,[31,31,32,31,31,31,30,29,30,29,30,30]],
+    2072:[730,[31,32,31,32,31,30,30,29,30,29,30,30]],
+    2073:[1096,[31,32,31,32,31,30,30,30,29,30,29,31]],
+    2074:[1461,[30,31,31,32,31,30,30,30,29,30,29,31]],
+    2075:[1826,[31,31,32,31,31,30,30,30,29,30,29,30]],
+    2076:[2191,[31,31,32,32,31,30,30,30,29,30,29,30]],
+    2077:[2556,[31,32,31,32,31,30,30,30,29,30,29,30]],
+    2078:[2922,[31,31,32,31,31,30,30,30,29,30,29,31]],
+    2079:[3287,[31,31,32,31,31,31,30,29,30,29,30,30]],
+    2080:[3652,[31,31,32,32,31,30,30,29,30,29,30,30]],
+    2081:[4018,[31,32,31,32,31,30,30,30,29,30,29,31]],
+    2082:[4383,[31,31,32,31,31,30,30,30,29,30,29,31]],
+    2083:[4748,[31,31,32,31,31,31,30,29,30,29,30,30]],
+    2084:[5113,[31,31,32,32,31,30,30,29,30,29,30,30]],
+    2085:[5479,[31,32,31,32,31,30,30,30,29,29,30,31]]
+  };
+  var BS_REF_AD = new Date(Date.UTC(2013,3,13)); // BS 2070-01-01 = AD 2013-04-13
+
+  function adToBS(adDate) {
+    var diff = Math.round((adDate - BS_REF_AD) / 86400000);
+    var bsY=2070, bsM=1, bsD=1;
+    var years = Object.keys(BS_DATA).map(Number).sort(function(a,b){return a-b;});
+    for(var yi=0;yi<years.length;yi++){
+      var y=years[yi], months=BS_DATA[y][1];
+      var totalDays=months.reduce(function(a,b){return a+b;},0);
+      if(diff<totalDays){bsY=y;break;}
+      diff-=totalDays;
+    }
+    var months=BS_DATA[bsY][1];
+    for(var mi=0;mi<12;mi++){
+      if(diff<months[mi]){bsM=mi+1;bsD=diff+1;break;}
+      diff-=months[mi];
+    }
+    return bsY+'-'+String(bsM).padStart(2,'0')+'-'+String(bsD).padStart(2,'0');
+  }
+
+  function parseAdRaw(raw) {
+    if(!raw) return null;
+    if(typeof raw==='number') return new Date(Math.round((raw-25569)*86400000));
+    var s=String(raw).trim(), p=s.split(/[\/\-\.]/);
+    if(p.length===3){
+      var a=p[0],b=p[1],c=p[2];
+      if(a.length===4) return new Date(Date.UTC(+a,+b-1,+c));
+      return new Date(Date.UTC(+c,+b-1,+a));
+    }
+    return null;
+  }
+
+  // Collect all unique AD dates → convert latest to BS for filename
+  var paidDateColOrig = sHeaders.findIndex(function(h){ return String(h).trim()==='PAID_DATE'; });
+  var fileDate = '';
+  if(paidDateColOrig >= 0) {
+    var uniqueAdDates = [];
+    sAllRows.forEach(function(r){
+      var d=parseAdRaw(r[paidDateColOrig]);
+      if(d){
+        var iso=d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');
+        if(uniqueAdDates.indexOf(iso)<0) uniqueAdDates.push(iso);
+      }
+    });
+    if(uniqueAdDates.length>0){
+      uniqueAdDates.sort();
+      var latestParts=uniqueAdDates[uniqueAdDates.length-1].split('-');
+      fileDate=latestParts[0]+'-'+latestParts[1]+'-'+latestParts[2];
+    }
+  }
+  if(!fileDate){var now=new Date();fileDate=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');}
+
+  // ── Column indices ───────────────────────────────────────────────
+  var origTxnIdx = sHeaders.findIndex(function(h){ return String(h).trim()==='TxnCount'; });
+  var origAmtIdx = sHeaders.findIndex(function(h){ return String(h).trim()==='PAID_AMT'; });
+  var origMerIdx = sHeaders.findIndex(function(h){ return String(h).trim()==='Merchant'; });
+  if(origMerIdx < 0) origMerIdx = sMColIndex;
+
+  // ── Compute raw numeric totals per merchant ──────────────────────
+  var merchantTotals = {};
+  names.forEach(function(name){
+    var rows=sMerchantMap[name], txn=0, amt=0;
+    rows.forEach(function(r){
+      txn+=(parseFloat(r[origTxnIdx])||0);
+      amt+=(parseFloat(r[origAmtIdx])||0);
+    });
+    merchantTotals[name]={txn:txn,amt:amt};
+  });
+
+  // Grand totals strictly from merchant totals
+  var grandTxn=0, grandAmt=0;
+  names.forEach(function(n){ grandTxn+=merchantTotals[n].txn; grandAmt+=merchantTotals[n].amt; });
+
+  sLog('<span class="hi">Processing '+names.length+' merchants...</span>');
+
+  // ── Per-merchant sheets ──────────────────────────────────────────
+  names.forEach(function(name, idx) {
+    var rows=sMerchantMap[name];
+    var merTxnTotal=merchantTotals[name].txn;
+    var merAmtTotal=merchantTotals[name].amt;
+
+    var keepCols=['OFFICE','Branch Code','Office Code','TxnCount','PAID_AMT'];
+    var keepIdx=keepCols.map(function(col){
+      return sHeaders.findIndex(function(h){ return String(h).trim()===col; });
+    });
+    var txnPos=keepCols.indexOf('TxnCount');
+    var amtPos=keepCols.indexOf('PAID_AMT');
+
+    // Build rows with formatted values
+    var sheetRows=rows.map(function(r){
+      return keepIdx.map(function(ci,pos){
+        if(ci<0) return '';
+        var v=r[ci], col=keepCols[pos];
+        if(col==='PAID_AMT'){var n=parseFloat(v);return !isNaN(n)?nepalFmt(n):(v!==undefined?v:'');}
+        if(col==='TxnCount'){var n=parseFloat(v);return !isNaN(n)?nepalFmtInt(n):(v!==undefined?v:'');}
+        return v!==undefined?v:'';
+      });
+    });
+
+    // Sort: TxnCount desc, then PAID_AMT desc (strip commas to compare)
+    sheetRows.sort(function(a,b){
+      var ta=parseFloat(String(a[txnPos]).replace(/,/g,''))||0;
+      var tb=parseFloat(String(b[txnPos]).replace(/,/g,''))||0;
+      if(tb!==ta) return tb-ta;
+      var aa=parseFloat(String(a[amtPos]).replace(/,/g,''))||0;
+      var ab=parseFloat(String(b[amtPos]).replace(/,/g,''))||0;
+      return ab-aa;
+    });
+
+    // Subtotal: only TxnCount and PAID_AMT, all others blank
+    var subtotalRow=keepCols.map(function(col){
+      if(col==='OFFICE')   return 'SUBTOTAL';
+      if(col==='TxnCount') return nepalFmtInt(merTxnTotal);
+      if(col==='PAID_AMT') return nepalFmt(merAmtTotal);
+      return '';
+    });
+
+    var sheetData=[keepCols].concat(sheetRows).concat([subtotalRow]);
+    var ws=XLSX.utils.aoa_to_sheet(sheetData);
+    ws['!cols']=keepCols.map(function(h,ci){
+      var maxLen=String(h).length;
+      sheetRows.slice(0,50).forEach(function(r){var l=String(r[ci]!==undefined?r[ci]:'').length;if(l>maxLen)maxLen=l;});
+      return {wch:Math.min(maxLen+3,40)};
+    });
+
+    var safeName=String(name).replace(/[:\\/\?\*\[\]]/g,'').trim().substring(0,31)||('Merchant_'+(idx+1));
+    XLSX.utils.book_append_sheet(wb,ws,safeName);
+
+    var pct=Math.round(((idx+1)/names.length)*90);
+    document.getElementById('s-pbar').style.width=pct+'%';
+    sLog('<span class="ok">✓</span> <span style="color:var(--accent)">'+safeName+'</span> — '+rows.length+' rows');
+  });
+
+  // ── Summary sheet: sorted by TxnCount desc, TOTAL row at bottom ──
+  var summaryData=names.map(function(n){
+    return {name:n,txn:merchantTotals[n].txn,amt:merchantTotals[n].amt};
+  });
+  summaryData.sort(function(a,b){ return b.txn!==a.txn?b.txn-a.txn:b.amt-a.amt; });
+
+  var summaryRows=[['Merchant','TxnCount','PAID_AMT']];
+  summaryData.forEach(function(d){ summaryRows.push([d.name,nepalFmtInt(d.txn),nepalFmt(d.amt)]); });
+  summaryRows.push(['TOTAL',nepalFmtInt(grandTxn),nepalFmt(grandAmt)]);
+
+  var wsSummary=XLSX.utils.aoa_to_sheet(summaryRows);
+  wsSummary['!cols']=[
+    {wch:Math.max.apply(null,summaryRows.map(function(r){return String(r[0]).length;}))+3},
+    {wch:16},{wch:20}
+  ];
+  XLSX.utils.book_append_sheet(wb,wsSummary,'Summary');
+  wb.SheetNames.splice(wb.SheetNames.indexOf('Summary'),1);
+  wb.SheetNames.unshift('Summary');
+
+  sLog('<span class="hi">Building Excel file...</span>');
+  setTimeout(function(){
+    var out=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+    sOutputBlob=new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    document.getElementById('s-pbar').style.width='100%';
+    sLog('<span class="ok">Done! Summary + '+names.length+' merchant sheets ready.</span>');
+    sShowResult(names, fileDate);
+  }, 100);
+}
+
+function sShowResult(names, fileDate) {
+  var rc = document.getElementById('s-resultCard');
+  rc.classList.add('show');
+  document.getElementById('s-resSub').textContent = 'Summary sheet + '+names.length+' merchant sheets · OFFICE, Branch Code, Office Code, TxnCount, PAID_AMT';
+  var summaryLine = '<div class="srow"><span class="sn" style="color:var(--gold)">Summary</span><span class="sc">'+names.length+' merchants · 3 cols</span></div>';
+  document.getElementById('s-sheetList').innerHTML = summaryLine + names.map(function(n){
+    return '<div class="srow"><span class="sn">'+n+'</span><span class="sc">'+sMerchantMap[n].length+' rows · 5 cols</span></div>';
+  }).join('');
+  document.getElementById('s-dlBtn').onclick = function(){
+    var url=URL.createObjectURL(sOutputBlob), a=document.createElement('a');
+    a.href=url; a.download='Merchant_Payments_'+fileDate+'.xlsx';
+    a.style.display='none'; document.body.appendChild(a); a.click();
+    setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},3000);
+  };
+  rc.scrollIntoView({behavior:'smooth'});
+}
+
+function sResetAll() {
+  sAllRows=[]; sHeaders=[]; sMerchantMap={}; sOutputBlob=null;
+  document.getElementById('s-filePill').style.display='none';
+  document.getElementById('s-fileInfo').style.display='none';
+  document.getElementById('s-resultCard').classList.remove('show');
+  document.getElementById('s-progressWrap').style.display='none';
+  document.getElementById('s-splitBtn').disabled=false;
+  sFileInput.value='';
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   BRANCH REPORT LOGIC
+═══════════════════════════════════════════════════════════════════ */
+// Each English month maps to the Nepali month it BELONGS to.
+// A single Nepali month spans parts of TWO English months — both English months
+// that overlap with a Nepali month are mapped to that Nepali month so their
+// data gets summed together into one report.
+// e.g. Falgun = mid-Feb to mid-March → both February AND March → 'Falgun'
+// Dynamic Nepali month detection:
+// Each Nepali month spans parts of 2 consecutive English months.
+// We detect which Nepali month the data belongs to by looking at which
+// two English months are present together in the data.
+const NEPALI_MONTH_PAIRS = [
+  { np: 'Baisakh',  months: ['April',     'May']      },
+  { np: 'Jestha',   months: ['May',       'June']     },
+  { np: 'Ashadh',   months: ['June',      'July']     },
+  { np: 'Shrawan',  months: ['July',      'August']   },
+  { np: 'Bhadra',   months: ['August',    'September']},
+  { np: 'Ashwin',   months: ['September', 'October']  },
+  { np: 'Kartik',   months: ['October',   'November'] },
+  { np: 'Mangsir',  months: ['November',  'December'] },
+  { np: 'Poush',    months: ['December',  'January']  },
+  { np: 'Magh',     months: ['January',   'February'] },
+  { np: 'Falgun',   months: ['February',  'March']    },
+  { np: 'Chaitra',  months: ['March',     'April']    }
+];
+
+function getNepaliMonthForData(allData) {
+  // Find which unique English months are in the data
+  const presentMonths = [...new Set(allData.map(d => d.month))];
+  // Score each Nepali month pair by how many of its months are present
+  let best = null, bestScore = 0;
+  NEPALI_MONTH_PAIRS.forEach(pair => {
+    const score = pair.months.filter(m => presentMonths.includes(m)).length;
+    if (score > bestScore) { bestScore = score; best = pair; }
+  });
+  return best;
+}
+
+let rAllData = [];
+let rCurrentKey = '';
+
+const rFmt = (n) => new Intl.NumberFormat('en-IN').format(Math.round(n));
+const rFmtAmt = (n) => new Intl.NumberFormat('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}).format(n);
+
+const rUploadCard = document.getElementById('r-uploadCard');
+const rFileInput  = document.getElementById('r-fileInput');
+
+rUploadCard.onclick = () => rFileInput.click();
+rUploadCard.addEventListener('dragover', e=>{e.preventDefault();rUploadCard.style.borderColor='var(--gold)';});
+rUploadCard.addEventListener('dragleave',()=>{rUploadCard.style.borderColor='';});
+rUploadCard.addEventListener('drop',e=>{
+  e.preventDefault(); rUploadCard.style.borderColor='';
+  if(e.dataTransfer.files[0]) rProcessFile(e.dataTransfer.files[0]);
+});
+rFileInput.onchange = () => { if(rFileInput.files[0]) rProcessFile(rFileInput.files[0]); };
+
+function rProcessFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(e.target.result,"text/html");
+      const rows = doc.querySelectorAll('tr');
+      const data = [];
+      rows.forEach(tr => {
+        const cells = tr.querySelectorAll('td, th');
+        if(cells.length >= 5) {
+          const clean = (c) => c.textContent.replace(/[\u00a0\s,]/g,'').trim();
+          const year   = clean(cells[0]);
+          const month  = cells[1].textContent.trim();
+          const office = cells[2].textContent.trim();
+          const txn    = parseFloat(clean(cells[3]));
+          const amt    = parseFloat(clean(cells[4]));
+          if(!isNaN(txn)&&!isNaN(amt)&&office&&office.toLowerCase()!=='office') {
+            data.push({year,month,office,txn,amt});
+          }
+        }
+      });
+      if(!data.length) throw new Error("No valid data rows found in this file.");
+      rAllData = data;
+      document.getElementById('r-errorBox').style.display='none';
+      document.getElementById('r-uploadText').innerHTML=`✅ <strong>${file.name}</strong> loaded.`;
+      rInitMonthTabs();
+    } catch(err) {
+      const box=document.getElementById('r-errorBox');
+      box.textContent=err.message; box.style.display='block';
+    }
+  };
+  reader.readAsText(file);
+}
+
+function rGroupByNepaliMonth() {
+  // Detect which Nepali month the loaded data belongs to (dynamic — works for any month)
+  const pair = getNepaliMonthForData(rAllData);
+  const npMonthName = pair ? pair.np : 'Unknown';
+  const validMonths = pair ? pair.months : [];
+
+  // Use the year from the data; compute BS year from the English year
+  const years = [...new Set(rAllData.map(d => d.year))];
+  // Pick the year that appears most
+  const npYear = parseInt(years[0]) + 57;
+  const key = npMonthName + '||' + npYear;
+
+  const grouped = {};
+  grouped[key] = {};
+
+  // Sum ALL rows (both English months) into one grouped result per office
+  rAllData.forEach(d => {
+    const office = d.office;
+    if (!grouped[key][office]) grouped[key][office] = {office, txn: 0, amt: 0};
+    grouped[key][office].txn += d.txn;
+    grouped[key][office].amt += d.amt;
+  });
+
+  return grouped;
+}
+
+function rInitMonthTabs() {
+  const grouped = rGroupByNepaliMonth();
+  const keys = Object.keys(grouped);
+  const bar = document.getElementById('r-monthBar');
+  bar.innerHTML = '';
+  keys.forEach((k, i) => {
+    const [npMonth, npYear] = k.split('||');
+    const btn = document.createElement('button');
+    btn.className = 'r-month-btn' + (i === 0 ? ' active' : '');
+    btn.textContent = npMonth + ' ' + npYear + ' BS';
+    btn.onclick = () => {
+      document.querySelectorAll('.r-month-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      rRenderReport(k);
+    };
+    bar.appendChild(btn);
+  });
+  bar.style.display = 'flex';
+  rRenderReport(keys[0]);
+}
+
+function rRenderReport(key) {
+  rCurrentKey = key;
+  const [npMonth, npYear] = key.split('||');
+  const grouped = rGroupByNepaliMonth();
+  const officeMap = grouped[key] || {};
+  const subset = Object.values(officeMap);
+  const byAmt = [...subset].sort((a, b) => b.amt - a.amt);
+  const byTxn = [...subset].sort((a, b) => b.txn - a.txn);
+  const tTxn  = subset.reduce((s, d) => s + d.txn, 0);
+  const tAmt  = subset.reduce((s, d) => s + d.amt, 0);
+  document.getElementById('r-reportSubtitle').textContent =
+    `Payment for the month of ${npMonth} ${npYear} BS`;
+  const fill = (id, list) => {
+    document.querySelector(`#${id} tbody`).innerHTML = list.map((r, i) => `
+      <tr>
+        <td class="center">${i + 1}</td>
+        <td class="${i < 10 ? 'bold' : ''}">${r.office}</td>
+        <td class="num">${rFmt(r.txn)}</td>
+        <td class="num">${rFmtAmt(r.amt)}</td>
+      </tr>`).join('');
+  };
+  fill('r-tableAmt', byAmt);
+  fill('r-tableTxn', byTxn);
+  document.getElementById('r-footAmtTxn').textContent = rFmt(tTxn);
+  document.getElementById('r-footAmtAmt').textContent = rFmtAmt(tAmt);
+  document.getElementById('r-footTxnTxn').textContent = rFmt(tTxn);
+  document.getElementById('r-footTxnAmt').textContent = rFmtAmt(tAmt);
+  document.getElementById('r-reportSection').style.display = 'block';
+}
+
+document.getElementById('r-exportBtn').onclick = function() {
+  if(!rCurrentKey) return;
+  const [npMonth, npYear]=rCurrentKey.split('||');
+  const grouped=rGroupByNepaliMonth();
+  const officeMap=grouped[rCurrentKey]||{};
+  const subset=Object.values(officeMap);
+  const byAmt=[...subset].sort((a,b)=>b.amt-a.amt);
+  const byTxn=[...subset].sort((a,b)=>b.txn-a.txn);
+  let csvRows=[
+    ['Branch Wise Paid Report','','','','','','','',''],
+    [`Payment for the month of ${npMonth} ${npYear} BS`,'','','','','','','',''],
+    [],
+    ['According to Amount Paid','','','','','According to Transaction count','','',''],
+    ['S.No','Branch Name','Txn Count','Amount Paid','','S.No','Branch Name','Txn Count','Amount Paid']
+  ];
+  const maxLen=Math.max(byAmt.length,byTxn.length);
+  for(let i=0;i<maxLen;i++){
+    const a=byAmt[i]||{office:'',txn:0,amt:0};
+    const t=byTxn[i]||{office:'',txn:0,amt:0};
+    csvRows.push([
+      i+1,`"${a.office}"`,
+      a.office?`"${rFmt(a.txn)}"`:''  ,a.office?`"${rFmtAmt(a.amt)}"`:'' ,'',
+      i+1,`"${t.office}"`,
+      t.office?`"${rFmt(t.txn)}"`:''  ,t.office?`"${rFmtAmt(t.amt)}"`:''
+    ]);
+  }
+  const tTxn=subset.reduce((s,d)=>s+d.txn,0);
+  const tAmt=subset.reduce((s,d)=>s+d.amt,0);
+  csvRows.push(['','TOTAL',`"${rFmt(tTxn)}"`,`"${rFmtAmt(tAmt)}"`, '','','TOTAL',`"${rFmt(tTxn)}"`,`"${rFmtAmt(tAmt)}"`]);
+  const csvString=csvRows.map(r=>r.join(',')).join('\n');
+  const blob=new Blob([csvString],{type:'text/csv;charset=utf-8;'});
+  const link=document.createElement('a');
+  link.href=URL.createObjectURL(blob);
+  link.setAttribute('download',`Branch_Report_${npMonth}_${npYear}_BS.csv`);
+  document.body.appendChild(link); link.click(); document.body.removeChild(link);
+};
+</script>
+</body>
+</html>
