@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEA DCS Payment Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#F5F7FA;
+  --surface:#FFFFFF;
+  --border:#E1E7EE;
+  --navy:#123C69;
+  --navy-dark:#0C2A4A;
+  --amber:#F0A500;
+  --text:#1B2430;
+  --muted:#66788F;
+  --good:#1E8A5A;
+  --bad:#C0392B;
+  --radius:10px;
+}
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+header.top{
+  background:linear-gradient(120deg,var(--navy) 0%,var(--navy-dark) 100%);
+  color:#fff;
+  padding:22px 28px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:10px;
+}
+header.top h1{margin:0;font-size:1.35rem;font-weight:700;letter-spacing:.2px;}
+header.top p{margin:4px 0 0;font-size:.85rem;color:#C9D8E8;}
+.bolt{color:var(--amber);}
+main{max-width:1200px;margin:0 auto;padding:22px 20px 60px;}
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:18px 20px;
+  margin-bottom:18px;
+}
+.card h2{margin:0 0 4px;font-size:1.02rem;}
+.card .sub{margin:0 0 14px;color:var(--muted);font-size:.83rem;}
+#dropzone{
+  border:2px dashed #B7C6D8;
+  border-radius:var(--radius);
+  padding:28px;
+  text-align:center;
+  cursor:pointer;
+  transition:.15s;
+  background:#FAFCFE;
+}
+#dropzone.drag{background:#EAF2FB;border-color:var(--navy);}
+#dropzone strong{color:var(--navy);}
+#fileInput{display:none;}
+#status{margin-top:12px;font-size:.85rem;}
+#status .pill{
+  display:inline-block;background:#EDF3F9;color:var(--navy);
+  border-radius:20px;padding:4px 12px;margin:3px 6px 0 0;font-weight:600;font-size:.78rem;
+}
+#status .pill.warn{background:#FDF1E4;color:#9A5B00;}
+#status .pill.ok{background:#E7F5EC;color:var(--good);}
+
+.filters-grid{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:18px;}
+@media(max-width:860px){.filters-grid{grid-template-columns:1fr;}}
+.filter-block h3{font-size:.82rem;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:0 0 8px;}
+.chiplist{display:flex;flex-wrap:wrap;gap:6px;max-height:160px;overflow:auto;padding-right:4px;}
+.chip{
+  border:1px solid var(--border);
+  background:#fff;
+  border-radius:20px;
+  padding:5px 11px;
+  font-size:.78rem;
+  cursor:pointer;
+  user-select:none;
+  color:var(--text);
+}
+.chip.on{background:var(--navy);border-color:var(--navy);color:#fff;}
+.dcs-search{
+  width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;
+  font-size:.82rem;margin-bottom:8px;
+}
+.dcs-list{max-height:160px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:6px 8px;background:#FAFCFE;}
+.dcs-list label{display:flex;align-items:center;gap:6px;font-size:.8rem;padding:3px 2px;cursor:pointer;}
+.linkrow{margin-top:8px;font-size:.76rem;}
+.linkrow a{color:var(--navy);cursor:pointer;text-decoration:underline;margin-right:12px;}
+.actions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
+button.btn{
+  background:var(--navy);color:#fff;border:none;border-radius:7px;
+  padding:9px 16px;font-size:.83rem;font-weight:600;cursor:pointer;
+}
+button.btn.secondary{background:#fff;color:var(--navy);border:1px solid var(--navy);}
+button.btn.amber{background:var(--amber);color:#3A2900;}
+button.btn:hover{filter:brightness(1.06);}
+
+table{width:100%;border-collapse:collapse;font-size:.86rem;}
+th,td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:right;}
+th:first-child,td:first-child{text-align:left;}
+th{background:#F3F6FA;color:var(--navy);font-size:.75rem;text-transform:uppercase;letter-spacing:.4px;}
+tr.total-row td{font-weight:700;background:#F8FAFC;border-top:2px solid var(--navy);}
+.bar-wrap{background:#EEF2F7;border-radius:5px;height:8px;width:100%;margin-top:4px;overflow:hidden;}
+.bar-fill{background:linear-gradient(90deg,var(--navy),var(--amber));height:100%;}
+.scroll-x{overflow-x:auto;}
+
+.mapping-row select{font-size:.78rem;padding:3px 5px;border-radius:5px;border:1px solid var(--border);}
+.unmapped-note{background:#FDF1E4;border:1px solid #F3D9B1;border-radius:8px;padding:10px 14px;font-size:.82rem;color:#7A4A00;margin-bottom:12px;}
+.badge{display:inline-block;background:var(--bad);color:#fff;border-radius:20px;padding:1px 8px;font-size:.7rem;margin-left:6px;}
+#mappingPanel{display:none;}
+#mappingSearch{width:260px;}
+.small-muted{color:var(--muted);font-size:.78rem;}
+.toggle-row{display:flex;align-items:center;gap:8px;font-size:.82rem;margin-bottom:10px;}
+select.groupSel{padding:5px 8px;border-radius:6px;border:1px solid var(--border);font-size:.8rem;}
+footer{text-align:center;color:var(--muted);font-size:.75rem;padding:20px;}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div>
+    <h1><span class="bolt">⚡</span> NEA DCS Payment Dashboard</h1>
+    <p>Province-wise summary of transaction count &amp; amount paid across DCS branches</p>
+  </div>
+  <div class="small-muted" style="color:#C9D8E8;">Runs entirely in your browser — no data leaves this page</div>
+</header>
+
+<main>
+
+  <div class="card">
+    <h2>1. Upload workbook</h2>
+    <p class="sub">Upload the Excel file (each sheet = one month's Branch Wise Paid Report).</p>
+    <div id="dropzone">
+      <div>📄 <strong>Click to choose a file</strong> or drag &amp; drop your .xlsx / .xls here</div>
+      <input type="file" id="fileInput" accept=".xlsx,.xls">
+    </div>
+    <div id="status"></div>
+  </div>
+
+  <div class="card" id="unmappedCard" style="display:none;">
+    <h2>DCS needing a province <span id="unmappedCount" class="badge">0</span></h2>
+    <p class="sub">These branch names weren't found in the built-in mapping. Assign a province so they're included in totals.</p>
+    <div id="unmappedList"></div>
+  </div>
+
+  <div class="card" id="filtersCard" style="display:none;">
+    <h2>2. Filters</h2>
+    <p class="sub">Toggle months / provinces / DCS to control the summary below. Everything is selected by default.</p>
+    <div class="filters-grid">
+      <div class="filter-block">
+        <h3>Months</h3>
+        <div class="chiplist" id="monthChips"></div>
+        <div class="linkrow"><a onclick="selectAll('month',true)">All</a><a onclick="selectAll('month',false)">None</a></div>
+      </div>
+      <div class="filter-block">
+        <h3>Provinces</h3>
+        <div class="chiplist" id="provinceChips"></div>
+        <div class="linkrow"><a onclick="selectAll('province',true)">All</a><a onclick="selectAll('province',false)">None</a></div>
+      </div>
+      <div class="filter-block">
+        <h3>DCS / Branch</h3>
+        <input type="text" class="dcs-search" id="dcsSearch" placeholder="Search DCS name...">
+        <div class="dcs-list" id="dcsList"></div>
+        <div class="linkrow"><a onclick="selectAll('dcs',true)">All</a><a onclick="selectAll('dcs',false)">None</a></div>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn" onclick="applyFilters()">Apply filters</button>
+      <button class="btn secondary" onclick="resetFilters()">Reset all</button>
+      <button class="btn amber" onclick="exportCSV()">Export summary CSV</button>
+      <button class="btn secondary" onclick="toggleMappingPanel()">Edit DCS ↔ Province mapping</button>
+    </div>
+  </div>
+
+  <div class="card" id="mappingPanel">
+    <h2>DCS ↔ Province mapping</h2>
+    <p class="sub">Correct any misassigned branch. Changes are saved in this browser and used immediately.</p>
+    <input type="text" id="mappingSearch" class="dcs-search" placeholder="Search DCS...">
+    <div class="scroll-x" style="max-height:320px;overflow-y:auto;">
+      <table id="mappingTable"><thead><tr><th>DCS</th><th style="text-align:left;">Province</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+
+  <div class="card" id="summaryCard" style="display:none;">
+    <h2>Province-wise summary</h2>
+    <p class="sub" id="summarySub"></p>
+    <div class="scroll-x">
+      <table id="provinceTable">
+        <thead><tr><th>Province</th><th>DCS Count</th><th>Txn Count</th><th>Amount Paid (Rs.)</th><th style="width:160px;">Share of Amount</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" id="detailCard" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+      <div>
+        <h2 style="margin-bottom:2px;">DCS-wise detail</h2>
+        <p class="sub" style="margin-bottom:0;">Based on current filters</p>
+      </div>
+      <div>
+        <label class="small-muted">Group by
+          <select class="groupSel" id="groupMode" onchange="renderDetail()">
+            <option value="dcs">DCS (combined across selected months)</option>
+            <option value="dcsmonth">DCS + Month</option>
+          </select>
+        </label>
+      </div>
+    </div>
+    <div class="scroll-x">
+      <table id="detailTable">
+        <thead><tr id="detailHead"></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+<footer>Built for province-wise DCS payment reporting · mapping is editable and saved locally in your browser</footer>
+
+<script>
+/* ---------------- Built-in DCS -> Province mapping ---------------- */
+const DEFAULT_MAP = {
+"ACHHAM DC":"Sudurpashchim","AMUWA DC":"Lumbini","ANARMANI DCS":"Koshi","ARGHAKHANCHI":"Lumbini",
+"ARUGHAT DC":"Gandaki","ATTARIYA SUB-DC":"Sudurpashchim","BADEGAUN SUB-BRANCH":"Bagmati","BAGLUNG DC":"Gandaki",
+"BAITADI DC":"Sudurpashchim","BAJHANG DC":"Sudurpashchim","BAJURA DC":"Sudurpashchim","BANESHWOR DC":"Bagmati",
+"BANSGADHI SUB-BRANCH":"Lumbini","BARATHAWA DCS":"Madhesh","BARDAGHAT DC":"Lumbini","BARDIBAS SUB DC":"Madhesh",
+"BELAURI DC":"Sudurpashchim","BELBARI DC":"Koshi","BELTAR SUB DC":"Koshi","BHADRAPUR DC":"Koshi",
+"BHAIRAHAWA DC":"Lumbini","BHAJANI DC":"Sudurpashchim","BHAKTAPUR DC":"Bagmati","BHARATPUR":"Bagmati",
+"BHOJPUR DCS":"Koshi","BHURI SUB-BRANCH":"Lumbini","BIRATNAGAR DC":"Koshi","BIRGUNJ DC":"Madhesh",
+"BODEBARSAIEN DC":"Madhesh","BUDABARE SUB DC":"Koshi","BUDHANILKANTHA SUB-DC":"Bagmati","BUTWAL":"Lumbini",
+"CHABAHIL SUB DC":"Bagmati","CHANAULI DC":"Bagmati","CHANDRANIGAPUR DC":"Madhesh","CHAPAGAUN SUB-BRANCH":"Bagmati",
+"DADELDHURA DC":"Sudurpashchim","DAILEKH DC":"Karnali","DAMAK DC":"Koshi","DARCHULA DC":"Sudurpashchim",
+"DHADING DC":"Bagmati","DHANGADHI DC":"Sudurpashchim","DHANKUTA DC":"Koshi","DHANUSHA DC":"Madhesh",
+"DHARAN":"Koshi","DHULABARI DC":"Koshi","DHUNCHE DC":"Bagmati","DIKTEL DC":"Koshi","DOLAKHA BRANCH":"Bagmati",
+"DOLPA DC":"Karnali","DOTI DC":"Sudurpashchim","DUHABI DC":"Koshi","GAIDAKOT":"Gandaki","GAMGADH DC":"Karnali",
+"GAUR DC":"Madhesh","GAURADAH DCS":"Koshi","GAUSHALA DC":"Madhesh","GHORAHI DC":"Lumbini","GORKHA":"Gandaki",
+"GULARIYA DC":"Lumbini","GULMI DC":"Lumbini","HANUMAN NAGAR SUB DC":"Madhesh","HETAUDA DC":"Bagmati",
+"ILAM DC":"Koshi","INARUWA DC":"Koshi","ITAHARI DC":"Koshi","JAHARE SUB-BRANCH":"Karnali","JAJARKOT DC":"Karnali",
+"JALESHWOR DC":"Madhesh","JANAKPUR BRANCH":"Madhesh","JOGBUDA SUB-DC":"Sudurpashchim","JORPATI DCS":"Bagmati",
+"JUMLA DC":"Karnali","KALAIYA DC":"Madhesh","KALIKOT DC":"Karnali","KANCHANPUR DCS":"Madhesh",
+"KATARI SUB-DC":"Koshi","KAVRE DC":"Bagmati","KAWASOTI DC":"Gandaki","KHAIRENITAR SUB-DC":"Gandaki",
+"KHAJURA SUB-DC":"Lumbini","KHANDBARI DC":"Koshi","KIRTIPUR DC":"Bagmati","KOHALPUR DC":"Lumbini",
+"KRISHNAGAR DC":"Lumbini","KULESWORE DC":"Bagmati","LAGANKHEL DCS":"Bagmati","LAHAN DC":"Madhesh",
+"GRAMIN SUB DCS":"Gandaki","HELDUNG DC":"Karnali",
+"LALBANDI DC":"Madhesh","LAMAHI DCS":"Lumbini","LAMJUNG DC":"Gandaki","LEKHNATH DC":"Gandaki",
+"LUBHU SUB BRANCH":"Bagmati","LUMBINI SUB DC":"Lumbini","MAHARAJGUNJ DC":"Bagmati","MAHENDRANAGAR DC":"Sudurpashchim",
+"MALANGWA DC":"Madhesh","MANANG DCS":"Gandaki","MAULAPUR DC":"Madhesh","MELAMCHI DC":"Bagmati",
+"MIRCHAIYA DC":"Madhesh","MYAGDI DC":"Gandaki","NAXAL SUB BRANCH":"Bagmati","NAYAMILL DC":"Lumbini",
+"NEPALGUNJ DC":"Lumbini","NIJGAD":"Madhesh","NUWAKOT DCS":"Bagmati","OKHALDHUNGA DC":"Koshi","PALPA DC":"Lumbini",
+"PALUNG BRANCH":"Bagmati","PANCHKHAL DC":"Bagmati","PANCHTHAR DC":"Koshi","PARASI DC":"Lumbini",
+"PARBAT BRANCH":"Gandaki","POKHARA DCS":"Gandaki","POKHARIA DC":"Madhesh",
+"PATAN SUB-DC":"Sudurpashchim","PULCHOWK BRANCH":"Bagmati","PYUTHAN DC":"Lumbini","RAJAPUR DCS":"Lumbini","RAJBIRAJ DC":"Madhesh",
+"RAMECHHAP DC":"Bagmati","RANGELI DC":"Koshi","RANI SUB DC":"Koshi","RATNAPARK DC":"Bagmati","RIDI SUB DC":"Lumbini",
+"ROLPA DC":"Lumbini","RUKUM DC":"Karnali","RUKUM PURBA":"Lumbini","SAKHUWA BRANCH":"Madhesh","SALYAN DC":"Karnali",
+"SANISCHARE SUB-DC":"Koshi","SIMARA DC":"Madhesh","SIMRAUNGADH DC":"Madhesh","SINDHU DCS":"Bagmati",
+"SINDHULI DC":"Bagmati","SIRAHA DCS":"Madhesh","SOLU DC":"Koshi","SURKHET DC":"Karnali","SURUNGA SUB DC":"Koshi",
+"SYANGJA BRANCH":"Gandaki","TANAHU DC":"Gandaki","TANDI DC":"Bagmati","TAPLEJUNG DC":"Koshi","TATOPANI DC":"Gandaki",
+"TAULIHAWA DC":"Lumbini","TERATHUM DC":"Koshi","THIMI DC":"Bagmati","TIKAPUR DC":"Sudurpashchim","TULSIPUR DC":"Lumbini",
+"UDAYPUR DC":"Koshi","URLABARI DC":"Koshi","YADUKUWA DC":"Madhesh"
+};
+const PROVINCES = ["Koshi","Madhesh","Bagmati","Gandaki","Lumbini","Karnali","Sudurpashchim"];
+const STORAGE_KEY = "nea_dcs_province_overrides_v1";
+
+function loadMapping(){
+  let overrides = {};
+  try{ overrides = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); }catch(e){ overrides = {}; }
+  return Object.assign({}, DEFAULT_MAP, overrides);
+}
+function saveOverride(dcs, province){
+  let overrides = {};
+  try{ overrides = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); }catch(e){ overrides = {}; }
+  overrides[dcs] = province;
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(overrides)); }catch(e){}
+}
+let MAPPING = loadMapping();
+
+function normName(s){
+  return String(s||"").trim().toUpperCase().replace(/\s+/g," ").replace(/\.$/,"");
+}
+function parseNum(v){
+  if(v===null||v===undefined||v==="") return 0;
+  if(typeof v === "number") return v;
+  const cleaned = String(v).replace(/,/g,"").trim();
+  const n = parseFloat(cleaned);
+  return isNaN(n) ? 0 : n;
+}
+function formatIndian(num, decimals){
+  decimals = decimals===undefined?2:decimals;
+  num = Number(num)||0;
+  const sign = num<0 ? "-" : "";
+  num = Math.abs(num);
+  const fixed = num.toFixed(decimals);
+  const parts = fixed.split(".");
+  let intPart = parts[0];
+  const dec = parts[1];
+  let lastThree = intPart.slice(-3);
+  let other = intPart.slice(0, -3);
+  if(other !== "") lastThree = "," + lastThree;
+  const formattedOther = other.replace(/\B(?=(\d{2})+(?!\d))/g, ",");
+  const result = formattedOther + lastThree;
+  return sign + result + (decimals>0 ? "." + dec : "");
+}
+
+/* ---------------- Parsing workbook ---------------- */
+let RECORDS = []; // {month, dcsRaw, dcs, province, txnCount, amountPaid}
+let monthsOrder = [];
+
+function extractMonthLabel(rows, sheetName){
+  for(let i=0;i<Math.min(rows.length,6);i++){
+    const row = rows[i] || [];
+    for(const cell of row){
+      if(typeof cell === "string" && /month of/i.test(cell)){
+        const m = cell.match(/month of\s+(.+)/i);
+        if(m) return m[1].trim().replace(/[.:]+$/,"");
+      }
+    }
+  }
+  return sheetName;
+}
+
+function parseSheet(rows, sheetName){
+  const monthLabel = extractMonthLabel(rows, sheetName);
+  // find header row containing "Branch Name"
+  let headerRowIdx = -1, branchCol = -1;
+  for(let i=0;i<rows.length;i++){
+    const row = rows[i] || [];
+    for(let c=0;c<row.length;c++){
+      if(typeof row[c] === "string" && row[c].trim().toLowerCase() === "branch name"){
+        headerRowIdx = i; branchCol = c; break;
+      }
+    }
+    if(headerRowIdx !== -1) break;
+  }
+  if(headerRowIdx === -1) return { month: monthLabel, records: [] };
+  const txnCol = branchCol + 1;
+  const amtCol = branchCol + 2;
+  const out = [];
+  for(let i=headerRowIdx+1;i<rows.length;i++){
+    const row = rows[i] || [];
+    const branchRaw = row[branchCol];
+    if(branchRaw === undefined || branchRaw === null || String(branchRaw).trim() === "") break;
+    const branch = String(branchRaw).trim();
+    if(branch.toUpperCase() === "TOTAL") break;
+    const dcs = normName(branch);
+    out.push({
+      month: monthLabel,
+      dcsRaw: branch,
+      dcs: dcs,
+      province: MAPPING[dcs] || null,
+      txnCount: parseNum(row[txnCol]),
+      amountPaid: parseNum(row[amtCol])
+    });
+  }
+  return { month: monthLabel, records: out };
+}
+
+function handleWorkbook(wb){
+  RECORDS = [];
+  monthsOrder = [];
+  wb.SheetNames.forEach(sn=>{
+    const ws = wb.Sheets[sn];
+    const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null, raw:true});
+    const {month, records} = parseSheet(rows, sn);
+    if(records.length){
+      if(!monthsOrder.includes(month)) monthsOrder.push(month);
+      RECORDS = RECORDS.concat(records);
+    }
+  });
+  afterLoad();
+}
+
+/* ---------------- UI wiring ---------------- */
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+dropzone.addEventListener('click', ()=>fileInput.click());
+dropzone.addEventListener('dragover', e=>{e.preventDefault(); dropzone.classList.add('drag');});
+dropzone.addEventListener('dragleave', ()=>dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', e=>{
+  e.preventDefault(); dropzone.classList.remove('drag');
+  if(e.dataTransfer.files.length) loadFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e=>{
+  if(e.target.files.length) loadFile(e.target.files[0]);
+});
+
+function loadFile(file){
+  const status = document.getElementById('status');
+  status.innerHTML = '<span class="pill">Reading file…</span>';
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, {type:"array"});
+      handleWorkbook(wb);
+    }catch(err){
+      status.innerHTML = '<span class="pill" style="background:#FBE1DD;color:#8A1F0F;">Could not read file: '+err.message+'</span>';
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+let filters = { months:new Set(), provinces:new Set(), dcs:new Set() };
+
+function afterLoad(){
+  const uniqueDCS = [...new Set(RECORDS.map(r=>r.dcs))].sort();
+  const unmapped = uniqueDCS.filter(d=>!MAPPING[d]);
+
+  const status = document.getElementById('status');
+  status.innerHTML =
+    '<span class="pill ok">'+monthsOrder.length+' month(s) loaded</span>'+
+    '<span class="pill">'+uniqueDCS.length+' DCS found</span>'+
+    '<span class="pill">'+RECORDS.length+' rows</span>'+
+    (unmapped.length ? '<span class="pill warn">'+unmapped.length+' unmapped DCS</span>' : '<span class="pill ok">all DCS mapped</span>');
+
+  renderUnmapped(unmapped);
+  renderFilters(uniqueDCS);
+  renderMappingTable();
+  filters.months = new Set(monthsOrder);
+  filters.provinces = new Set(PROVINCES.concat(unmapped.length?["Unmapped"]:[]));
+  filters.dcs = new Set(uniqueDCS);
+  document.getElementById('filtersCard').style.display = 'block';
+  applyFilters();
+}
+
+function renderUnmapped(unmapped){
+  const card = document.getElementById('unmappedCard');
+  const list = document.getElementById('unmappedList');
+  document.getElementById('unmappedCount').textContent = unmapped.length;
+  if(!unmapped.length){ card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  list.innerHTML = '<div class="unmapped-note">Assign a province to each branch below — this updates the mapping used everywhere on this page.</div>' +
+    unmapped.map(d=>{
+      return '<div class="mapping-row" style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #F3E6CC;">'+
+        '<span>'+d+'</span>'+
+        '<select onchange="assignProvince(\''+d.replace(/'/g,"\\'")+'\', this.value)">'+
+          '<option value="">Select province…</option>'+
+          PROVINCES.map(p=>'<option value="'+p+'">'+p+'</option>').join('')+
+        '</select></div>';
+    }).join('');
+}
+
+function assignProvince(dcs, province){
+  if(!province) return;
+  MAPPING[dcs] = province;
+  saveOverride(dcs, province);
+  RECORDS.forEach(r=>{ if(r.dcs === dcs) r.province = province; });
+  const uniqueDCS = [...new Set(RECORDS.map(r=>r.dcs))].sort();
+  const unmapped = uniqueDCS.filter(d=>!MAPPING[d]);
+  renderUnmapped(unmapped);
+  renderMappingTable();
+  filters.provinces.add(province);
+  renderFilters(uniqueDCS);
+  applyFilters();
+}
+
+function renderFilters(uniqueDCS){
+  const monthWrap = document.getElementById('monthChips');
+  monthWrap.innerHTML = monthsOrder.map(m=>chipHTML('month', m)).join('');
+  const provWrap = document.getElementById('provinceChips');
+  const provincesPresent = PROVINCES.concat(RECORDS.some(r=>!r.province) ? ["Unmapped"] : []);
+  provWrap.innerHTML = provincesPresent.map(p=>chipHTML('province', p)).join('');
+  renderDcsList(uniqueDCS, "");
+  document.getElementById('dcsSearch').oninput = function(){
+    renderDcsList(uniqueDCS, this.value);
+  };
+}
+
+function chipHTML(kind, value){
+  const id = kind+'::'+value;
+  return '<span class="chip on" data-kind="'+kind+'" data-value="'+value.replace(/"/g,'&quot;')+'" onclick="toggleChip(this)">'+value+'</span>';
+}
+
+function toggleChip(el){
+  const kind = el.dataset.kind, value = el.dataset.value;
+  const set = filters[kind+'s'];
+  if(set.has(value)){ set.delete(value); el.classList.remove('on'); }
+  else { set.add(value); el.classList.add('on'); }
+  applyFilters();
+}
+
+function renderDcsList(uniqueDCS, query){
+  const wrap = document.getElementById('dcsList');
+  const q = normName(query);
+  const filtered = q ? uniqueDCS.filter(d=>d.includes(q)) : uniqueDCS;
+  wrap.innerHTML = filtered.map(d=>{
+    const checked = filters.dcs.has(d) ? 'checked' : '';
+    return '<label><input type="checkbox" '+checked+' onchange="toggleDcsCheckbox(\''+d.replace(/'/g,"\\'")+'\', this.checked)"> '+d+'</label>';
+  }).join('') || '<span class="small-muted">No matches</span>';
+}
+function toggleDcsCheckbox(dcs, checked){
+  if(checked) filters.dcs.add(dcs); else filters.dcs.delete(dcs);
+  applyFilters();
+}
+
+function selectAll(kind, on){
+  if(kind === 'month'){
+    filters.months = new Set(on ? monthsOrder : []);
+    document.querySelectorAll('#monthChips .chip').forEach(c=>c.classList.toggle('on', on));
+  } else if(kind === 'province'){
+    const provincesPresent = PROVINCES.concat(RECORDS.some(r=>!r.province) ? ["Unmapped"] : []);
+    filters.provinces = new Set(on ? provincesPresent : []);
+    document.querySelectorAll('#provinceChips .chip').forEach(c=>c.classList.toggle('on', on));
+  } else if(kind === 'dcs'){
+    const uniqueDCS = [...new Set(RECORDS.map(r=>r.dcs))];
+    filters.dcs = new Set(on ? uniqueDCS : []);
+    renderDcsList(uniqueDCS, document.getElementById('dcsSearch').value);
+  }
+  applyFilters();
+}
+function resetFilters(){
+  const uniqueDCS = [...new Set(RECORDS.map(r=>r.dcs))];
+  filters.months = new Set(monthsOrder);
+  filters.provinces = new Set(PROVINCES.concat(RECORDS.some(r=>!r.province) ? ["Unmapped"] : []));
+  filters.dcs = new Set(uniqueDCS);
+  document.querySelectorAll('.chip').forEach(c=>c.classList.add('on'));
+  document.getElementById('dcsSearch').value = "";
+  renderDcsList(uniqueDCS, "");
+  applyFilters();
+}
+
+/* ---------------- Filtering & summary ---------------- */
+let lastFiltered = [];
+function applyFilters(){
+  lastFiltered = RECORDS.filter(r=>{
+    const provLabel = r.province || "Unmapped";
+    return filters.months.has(r.month) && filters.provinces.has(provLabel) && filters.dcs.has(r.dcs);
+  });
+  renderSummary(lastFiltered);
+  renderDetail();
+}
+
+function renderSummary(records){
+  const card = document.getElementById('summaryCard');
+  if(!records.length){ card.style.display = records===lastFiltered && RECORDS.length ? 'block' : 'none'; }
+  if(!RECORDS.length){ card.style.display='none'; return; }
+  card.style.display = 'block';
+
+  const grouped = {};
+  records.forEach(r=>{
+    const p = r.province || "Unmapped";
+    if(!grouped[p]) grouped[p] = { txn:0, amt:0, dcsSet:new Set() };
+    grouped[p].txn += r.txnCount;
+    grouped[p].amt += r.amountPaid;
+    grouped[p].dcsSet.add(r.dcs);
+  });
+  const totalAmt = Object.values(grouped).reduce((s,g)=>s+g.amt,0);
+  const totalTxn = Object.values(grouped).reduce((s,g)=>s+g.txn,0);
+  const totalDcs = new Set(records.map(r=>r.dcs)).size;
+
+  const order = PROVINCES.concat(["Unmapped"]).filter(p=>grouped[p]);
+  const tbody = document.querySelector('#provinceTable tbody');
+  tbody.innerHTML = order.map(p=>{
+    const g = grouped[p];
+    const share = totalAmt ? (g.amt/totalAmt*100) : 0;
+    return '<tr><td>'+p+'</td><td>'+g.dcsSet.size+'</td><td>'+formatIndian(g.txn,0)+'</td><td>'+formatIndian(g.amt,2)+'</td>'+
+      '<td><div class="bar-wrap"><div class="bar-fill" style="width:'+share.toFixed(1)+'%;"></div></div><span class="small-muted">'+share.toFixed(1)+'%</span></td></tr>';
+  }).join('') + '<tr class="total-row"><td>Total</td><td>'+totalDcs+'</td><td>'+formatIndian(totalTxn,0)+'</td><td>'+formatIndian(totalAmt,2)+'</td><td></td></tr>';
+
+  document.getElementById('summarySub').textContent =
+    filters.months.size+' month(s) · '+filters.provinces.size+' province(s) selected · '+filters.dcs.size+' DCS selected';
+}
+
+function renderDetail(){
+  const detailCard = document.getElementById('detailCard');
+  if(!RECORDS.length){ detailCard.style.display='none'; return; }
+  detailCard.style.display = 'block';
+  const mode = document.getElementById('groupMode').value;
+  const head = document.getElementById('detailHead');
+  const tbody = document.querySelector('#detailTable tbody');
+
+  if(mode === 'dcs'){
+    head.innerHTML = '<th>DCS</th><th>Province</th><th>Months incl.</th><th>Txn Count</th><th>Amount Paid (Rs.)</th>';
+    const grouped = {};
+    lastFiltered.forEach(r=>{
+      if(!grouped[r.dcs]) grouped[r.dcs] = { province:r.province||"Unmapped", txn:0, amt:0, months:new Set() };
+      grouped[r.dcs].txn += r.txnCount;
+      grouped[r.dcs].amt += r.amountPaid;
+      grouped[r.dcs].months.add(r.month);
+    });
+    const rows = Object.entries(grouped).sort((a,b)=>b[1].amt-a[1].amt);
+    tbody.innerHTML = rows.map(([dcs,g])=>
+      '<tr><td>'+dcs+'</td><td>'+g.province+'</td><td>'+g.months.size+'</td><td>'+formatIndian(g.txn,0)+'</td><td>'+formatIndian(g.amt,2)+'</td></tr>'
+    ).join('') || '<tr><td colspan="5" class="small-muted">No records for current filters</td></tr>';
+  } else {
+    head.innerHTML = '<th>DCS</th><th>Province</th><th>Month</th><th>Txn Count</th><th>Amount Paid (Rs.)</th>';
+    const rows = [...lastFiltered].sort((a,b)=> b.amountPaid - a.amountPaid);
+    tbody.innerHTML = rows.map(r=>
+      '<tr><td>'+r.dcsRaw+'</td><td>'+(r.province||"Unmapped")+'</td><td>'+r.month+'</td><td>'+formatIndian(r.txnCount,0)+'</td><td>'+formatIndian(r.amountPaid,2)+'</td></tr>'
+    ).join('') || '<tr><td colspan="5" class="small-muted">No records for current filters</td></tr>';
+  }
+}
+
+/* ---------------- Mapping editor panel ---------------- */
+function toggleMappingPanel(){
+  const el = document.getElementById('mappingPanel');
+  el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+}
+function renderMappingTable(query){
+  const tbody = document.querySelector('#mappingTable tbody');
+  const q = normName(query||"");
+  const allDcs = Object.keys(MAPPING).sort();
+  const filtered = q ? allDcs.filter(d=>d.includes(q)) : allDcs;
+  tbody.innerHTML = filtered.map(d=>{
+    const current = MAPPING[d];
+    return '<tr><td>'+d+'</td><td style="text-align:left;">'+
+      '<select onchange="assignProvince(\''+d.replace(/'/g,"\\'")+'\', this.value)">'+
+      PROVINCES.map(p=>'<option value="'+p+'" '+(p===current?'selected':'')+'>'+p+'</option>').join('')+
+      '</select></td></tr>';
+  }).join('');
+}
+document.addEventListener('DOMContentLoaded', ()=>{
+  document.getElementById('mappingSearch').addEventListener('input', function(){
+    renderMappingTable(this.value);
+  });
+});
+renderMappingTable();
+
+/* ---------------- CSV export ---------------- */
+function exportCSV(){
+  if(!lastFiltered.length){ alert('No data to export for the current filters.'); return; }
+
+  // --- Province summary ---
+  const provGrouped = {};
+  lastFiltered.forEach(r=>{
+    const p = r.province || "Unmapped";
+    if(!provGrouped[p]) provGrouped[p] = { txn:0, amt:0, dcsSet:new Set() };
+    provGrouped[p].txn += r.txnCount;
+    provGrouped[p].amt += r.amountPaid;
+    provGrouped[p].dcsSet.add(r.dcs);
+  });
+  const order = PROVINCES.concat(["Unmapped"]).filter(p=>provGrouped[p]);
+  let totalTxn = 0, totalAmt = 0;
+  const totalDcsSet = new Set(lastFiltered.map(r=>r.dcs));
+
+  let csv = "Province,DCS Count,Txn Count,Amount Paid (Rs.)\n";
+  order.forEach(p=>{
+    const g = provGrouped[p];
+    totalTxn += g.txn; totalAmt += g.amt;
+    csv += [p, g.dcsSet.size, '"'+formatIndian(g.txn,0)+'"', '"'+formatIndian(g.amt,2)+'"'].join(",") + "\n";
+  });
+  csv += ["Total", totalDcsSet.size, '"'+formatIndian(totalTxn,0)+'"', '"'+formatIndian(totalAmt,2)+'"'].join(",") + "\n";
+
+  // --- DCS detail, combined across selected months, grouped by province ---
+  const dcsGrouped = {};
+  lastFiltered.forEach(r=>{
+    if(!dcsGrouped[r.dcs]) dcsGrouped[r.dcs] = { dcsRaw:r.dcsRaw, province:r.province||"Unmapped", txn:0, amt:0, months:new Set() };
+    dcsGrouped[r.dcs].txn += r.txnCount;
+    dcsGrouped[r.dcs].amt += r.amountPaid;
+    dcsGrouped[r.dcs].months.add(r.month);
+  });
+
+  csv += "\nDCS Detail (grouped by Province)\n";
+  csv += "Province,DCS,Months incl.,Txn Count,Amount Paid (Rs.)\n";
+  order.forEach(p=>{
+    const entries = Object.values(dcsGrouped)
+      .filter(g=>g.province===p)
+      .sort((a,b)=>b.amt-a.amt);
+    entries.forEach(g=>{
+      csv += [p, '"'+g.dcsRaw+'"', g.months.size, '"'+formatIndian(g.txn,0)+'"', '"'+formatIndian(g.amt,2)+'"'].join(",") + "\n";
+    });
+  });
+
+  const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = "dcs_payment_summary.csv";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>

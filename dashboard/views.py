@@ -5,3 +5,6 @@ def home(request):
 
 def load(request):
     return render(request, 'loader.html')
+
+def prov(request):
+    return render(request, 'province.html')
